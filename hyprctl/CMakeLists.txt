@@ -6,3 +6,5 @@ project(
 )
 
 add_executable(hyprctl "main.cpp")
+
+install(TARGETS hyprctl)

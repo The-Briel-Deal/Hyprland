@@ -14,3 +14,5 @@ pkg_check_modules(tomlplusplus REQUIRED IMPORTED_TARGET tomlplusplus)
 add_executable(hyprpm ${SRCFILES})
 
 target_link_libraries(hyprpm PUBLIC PkgConfig::tomlplusplus)
+
+install(TARGETS hyprpm)

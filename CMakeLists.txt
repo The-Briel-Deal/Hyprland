@@ -26,12 +26,6 @@ execute_process(
 #
 #
 
-# udis
-add_subdirectory("subprojects/udis86")
-
-# wlroots
-message(STATUS "Setting up wlroots")
-
 include(ExternalProject)
 include(GNUInstallDirs)
 
@@ -54,19 +48,6 @@ else()
     set(BUILDTYPE_LOWER "release")
 endif()
 
-ExternalProject_Add(
-    wlroots
-    PREFIX ${CMAKE_SOURCE_DIR}/subprojects/wlroots
-    SOURCE_DIR ${CMAKE_SOURCE_DIR}/subprojects/wlroots
-    PATCH_COMMAND sed -E -i -e "s/(soversion = .*$)/soversion = 13032/g" meson.build
-    CONFIGURE_COMMAND meson setup --reconfigure build --buildtype=${BUILDTYPE_LOWER} -Dwerror=false -Dxwayland=$<IF:$<BOOL:${NO_XWAYLAND}>,disabled,enabled> -Dexamples=false -Drenderers=gles2 $<IF:$<BOOL:${WITH_ASAN}>,-Db_sanitize=address,-Db_sanitize=none>
-    BUILD_COMMAND ninja -C build
-    BUILD_ALWAYS true
-    BUILD_IN_SOURCE true
-    BUILD_BYPRODUCTS ${CMAKE_SOURCE_DIR}/subprojects/wlroots/build/libwlroots.so.13032
-    INSTALL_COMMAND echo "wlroots: install not needed"
-)
-
 find_program(WaylandScanner NAMES wayland-scanner)
 message(STATUS "Found WaylandScanner at ${WaylandScanner}")
 execute_process(
@@ -75,6 +56,12 @@ execute_process(
     OUTPUT_VARIABLE WAYLAND_PROTOCOLS_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 message(STATUS "Found wayland-protocols at ${WAYLAND_PROTOCOLS_DIR}")
+execute_process(
+    COMMAND pkg-config --variable=pkgdatadir hyprland-protocols
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE HYPRLAND_PROTOCOLS_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "Found hyprland-protocols at ${HYPRLAND_PROTOCOLS_DIR}")
 
 if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES DEBUG)
     message(STATUS "Configuring Hyprland in Debug with CMake")
@@ -87,9 +74,6 @@ endif()
 include_directories(
   .
   "src/"
-  "subprojects/wlroots/include/"
-  "subprojects/wlroots/build/include/"
-  "subprojects/udis86/"
   "protocols/")
 set(CMAKE_CXX_STANDARD 23)
 add_compile_definitions(WLR_USE_UNSTABLE)
@@ -102,7 +86,7 @@ message(STATUS "Checking deps...")
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(OpenGL REQUIRED)
-pkg_check_modules(deps REQUIRED IMPORTED_TARGET wayland-server wayland-client wayland-cursor wayland-protocols cairo libdrm xkbcommon libinput pango pangocairo pixman-1 hyprlang>=0.3.2 hyprcursor) # we do not check for wlroots, as we provide it ourselves
+pkg_check_modules(deps REQUIRED IMPORTED_TARGET wayland-server wayland-client wayland-cursor wayland-protocols hyprland-protocols cairo libdrm xkbcommon libinput pango pangocairo pixman-1 udis86 wlroots hyprlang>=0.3.2 hyprcursor)
 
 file(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS "src/*.cpp")
 
@@ -113,7 +97,6 @@ if(USE_TRACY)
 endif()
 
 add_executable(Hyprland ${SRCFILES} ${TRACY_CPP_FILES})
-add_dependencies(Hyprland wlroots)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES DEBUG)
     message(STATUS "Setting debug flags")
@@ -201,8 +184,8 @@ message(STATUS "Setting link libraries")
 
 target_link_libraries(Hyprland rt PkgConfig::deps)
 
-function(protocol protoPath protoName external)
-    if (external)
+function(protocol protoPath protoName type)
+    if (type STREQUAL "internal")
         execute_process(
             COMMAND ${WaylandScanner} server-header ${protoPath} protocols/${protoName}-protocol.h
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
@@ -210,7 +193,7 @@ function(protocol protoPath protoName external)
             COMMAND ${WaylandScanner} private-code ${protoPath} protocols/${protoName}-protocol.c
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})  
         target_sources(Hyprland PRIVATE protocols/${protoName}-protocol.c)
-    else()
+    elseif (type STREQUAL "wayland")
         execute_process(
             COMMAND ${WaylandScanner} server-header ${WAYLAND_PROTOCOLS_DIR}/${protoPath} protocols/${protoName}-protocol.h
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
@@ -218,33 +201,39 @@ function(protocol protoPath protoName external)
             COMMAND ${WaylandScanner} private-code ${WAYLAND_PROTOCOLS_DIR}/${protoPath} protocols/${protoName}-protocol.c
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})  
         target_sources(Hyprland PRIVATE protocols/${protoName}-protocol.c)
+    else()
+        execute_process(
+            COMMAND ${WaylandScanner} server-header ${HYPRLAND_PROTOCOLS_DIR}/${protoPath} protocols/${protoName}-protocol.h
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        execute_process(
+            COMMAND ${WaylandScanner} private-code ${HYPRLAND_PROTOCOLS_DIR}/${protoPath} protocols/${protoName}-protocol.c
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})  
+        target_sources(Hyprland PRIVATE protocols/${protoName}-protocol.c)
     endif()
 endfunction()
 
 target_link_libraries(Hyprland
-        ${CMAKE_SOURCE_DIR}/subprojects/wlroots/build/libwlroots.so.13032 # wlroots is provided by us
         OpenGL::EGL
         OpenGL::GL
         Threads::Threads
-        libudis86
 )
 
-protocol("protocols/idle.xml" "idle" true)
-protocol("protocols/pointer-constraints-unstable-v1.xml" "pointer-constraints-unstable-v1" true)
-protocol("protocols/tablet-unstable-v2.xml" "tablet-unstable-v2" true)
-protocol("protocols/wlr-foreign-toplevel-management-unstable-v1.xml" "wlr-foreign-toplevel-management-unstable-v1" true)
-protocol("protocols/wlr-layer-shell-unstable-v1.xml" "wlr-layer-shell-unstable-v1" true)
-protocol("protocols/wlr-output-power-management-unstable-v1.xml" "wlr-output-power-management-unstable-v1" true)
-protocol("protocols/wlr-screencopy-unstable-v1.xml" "wlr-screencopy-unstable-v1" true)
-protocol("subprojects/hyprland-protocols/protocols/hyprland-global-shortcuts-v1.xml" "hyprland-global-shortcuts-v1" true)
-protocol("subprojects/hyprland-protocols/protocols/hyprland-toplevel-export-v1.xml" "hyprland-toplevel-export-v1" true)
-protocol("stable/xdg-shell/xdg-shell.xml" "xdg-shell" false)
-protocol("unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml" "linux-dmabuf-unstable-v1" false)
-protocol("unstable/xdg-output/xdg-output-unstable-v1.xml" "xdg-output-unstable-v1" false)
-protocol("staging/fractional-scale/fractional-scale-v1.xml" "fractional-scale-v1" false)
-protocol("staging/tearing-control/tearing-control-v1.xml" "tearing-control-v1" false)
-protocol("unstable/text-input/text-input-unstable-v1.xml" "text-input-unstable-v1" false)
-protocol("staging/cursor-shape/cursor-shape-v1.xml" "cursor-shape-v1" false)
+protocol("protocols/idle.xml" "idle" "internal")
+protocol("protocols/pointer-constraints-unstable-v1.xml" "pointer-constraints-unstable-v1" "internal")
+protocol("protocols/tablet-unstable-v2.xml" "tablet-unstable-v2" "internal")
+protocol("protocols/wlr-foreign-toplevel-management-unstable-v1.xml" "wlr-foreign-toplevel-management-unstable-v1" "internal")
+protocol("protocols/wlr-layer-shell-unstable-v1.xml" "wlr-layer-shell-unstable-v1" "internal")
+protocol("protocols/wlr-output-power-management-unstable-v1.xml" "wlr-output-power-management-unstable-v1" "internal")
+protocol("protocols/wlr-screencopy-unstable-v1.xml" "wlr-screencopy-unstable-v1" "internal")
+protocol("protocols/hyprland-global-shortcuts-v1.xml" "hyprland-global-shortcuts-v1" "hyprland")
+protocol("protocols/hyprland-toplevel-export-v1.xml" "hyprland-toplevel-export-v1" "hyprland")
+protocol("stable/xdg-shell/xdg-shell.xml" "xdg-shell" "wayland")
+protocol("unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml" "linux-dmabuf-unstable-v1" "wayland")
+protocol("unstable/xdg-output/xdg-output-unstable-v1.xml" "xdg-output-unstable-v1" "wayland")
+protocol("staging/fractional-scale/fractional-scale-v1.xml" "fractional-scale-v1" "wayland")
+protocol("staging/tearing-control/tearing-control-v1.xml" "tearing-control-v1" "wayland")
+protocol("unstable/text-input/text-input-unstable-v1.xml" "text-input-unstable-v1" "wayland")
+protocol("staging/cursor-shape/cursor-shape-v1.xml" "cursor-shape-v1" "wayland")
 
 # tools
 add_subdirectory(hyprctl)
@@ -275,13 +264,8 @@ file(GLOB_RECURSE MANPAGES CONFIGURE_DEPENDS "docs/*.1")
 install(FILES ${MANPAGES}
         DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
-# wlroots
-install(FILES ${CMAKE_SOURCE_DIR}/subprojects/wlroots/build/libwlroots.so.13032
-        DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
 # headers
 file(GLOB_RECURSE HEADERS_HL CONFIGURE_DEPENDS "*.h*")
-file(GLOB_RECURSE HEADERS_WLR CONFIGURE_DEPENDS "subprojects/wlroots/*.h")
 file(GLOB_RECURSE HEADERS_PROTO CONFIGURE_DEPENDS "protocols/*-protocol.h")
 
 install(FILES ${HEADERS_HL}

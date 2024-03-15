@@ -3,8 +3,7 @@
   stdenv,
   pkg-config,
   makeWrapper,
-  meson,
-  ninja,
+  cmake,
   binutils,
   cairo,
   git,
@@ -58,8 +57,7 @@ assert lib.assertMsg (!hidpiXWayland) "The option `hidpiXWayland` has been remov
 
     nativeBuildInputs = [
       jq
-      meson
-      ninja
+      cmake
       pkg-config
       makeWrapper
       wayland-scanner
@@ -101,22 +99,20 @@ assert lib.assertMsg (!hidpiXWayland) "The option `hidpiXWayland` has been remov
       pciutils
     ];
 
-    mesonBuildType =
+    cmakeBuildType =
       if debug
-      then "debug"
-      else "release";
+      then "Debug"
+      else "RelWithDebInfo";
 
-    mesonAutoFeatures = "disabled";
-
-    mesonFlags = builtins.concatLists [
-      (lib.optional enableXWayland "-Dxwayland=enabled")
-      (lib.optional legacyRenderer "-Dlegacy_renderer=enabled")
-      (lib.optional withSystemd "-Dsystemd=enabled")
+    cmakeFlags = [
+      (lib.cmakeBool "NO_XWAYLAND" (!enableXWayland))
+      (lib.cmakeBool "LEGACY_RENDERER" legacyRenderer)
+      (lib.cmakeBool "NO_SYSTEMD" (!withSystemd))
     ];
 
     patches = [
       # make meson use the provided wlroots instead of the git submodule
-      ./patches/meson-build.patch
+      # ./patches/meson-build.patch
     ];
 
     postPatch = ''

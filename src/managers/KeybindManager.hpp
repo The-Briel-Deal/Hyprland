@@ -2,6 +2,7 @@
 
 #include "../defines.hpp"
 #include <deque>
+#include <set>
 #include "../Compositor.hpp"
 #include <unordered_map>
 #include <functional>
@@ -16,6 +17,25 @@ struct SKeybind {
     uint32_t    keycode      = 0;
     bool        catchAll     = false;
     uint32_t    modmask      = 0;
+    std::string handler      = "";
+    std::string arg          = "";
+    bool        locked       = false;
+    std::string submap       = "";
+    bool        release      = false;
+    bool        repeat       = false;
+    bool        mouse        = false;
+    bool        nonConsuming = false;
+    bool        transparent  = false;
+    bool        ignoreMods   = false;
+
+    // DO NOT INITIALIZE
+    bool shadowed = false;
+};
+
+struct SMultiKeyKeybind {
+    std::set<uint32_t> keycodes = {};
+    bool               catchAll = false;
+    //    uint32_t    modmask      = 0;
     std::string handler      = "";
     std::string arg          = "";
     bool        locked       = false;
@@ -84,6 +104,8 @@ class CKeybindManager {
 
     std::list<SKeybind>                                               m_lKeybinds;
 
+    std::list<SMultiKeyKeybind>                                       m_lMultiKeyKeybinds;
+
   private:
     std::deque<SPressedKeyWithMods> m_dPressedKeys;
 
@@ -103,6 +125,8 @@ class CKeybindManager {
     CTimer                          m_tScrollTimer;
 
     bool                            handleKeybinds(const uint32_t, const SPressedKeyWithMods&, bool);
+
+    bool                            handleMultiKeyKeybinds(const std::set<uint32_t>);
 
     bool                            handleInternalKeybinds(xkb_keysym_t);
     bool                            handleVT(xkb_keysym_t);

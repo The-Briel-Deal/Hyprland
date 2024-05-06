@@ -1899,6 +1899,7 @@ std::optional<std::string> CConfigManager::handleBind(const std::string& command
     bool       nonConsuming = false;
     bool       transparent  = false;
     bool       ignoreMods   = false;
+    bool       multiKey     = false;
     const auto BINDARGS     = command.substr(4);
 
     for (auto& arg : BINDARGS) {
@@ -1916,6 +1917,8 @@ std::optional<std::string> CConfigManager::handleBind(const std::string& command
             transparent = true;
         } else if (arg == 'i') {
             ignoreMods = true;
+        } else if (arg == 'k') {
+            multiKey = true;
         } else {
             return "bind: invalid flag";
         }
@@ -1929,6 +1932,20 @@ std::optional<std::string> CConfigManager::handleBind(const std::string& command
 
     const auto ARGS = CVarList(value, 4);
 
+    if (multiKey) {
+        Debug::log(LOG, "MultiKey Hit");
+        if (ARGS.size() != 3)
+            return "multiKey binds need 3 args.";
+        const auto keysPressed = CVarList(ARGS[0], 8, '+');
+        for (auto KEY = keysPressed.begin(); KEY != keysPressed.end();) {
+            SParsedKey parsedKey = parseKey(KEY->data());
+            const auto KBKEY     = xkb_keysym_from_name(parsedKey.key.c_str(), XKB_KEYSYM_CASE_INSENSITIVE);
+            ++KEY;
+            Debug::log(LOG, "Key Value: {}", parsedKey.keycode);
+        }
+        Debug::log(LOG, "MultiKey Hit");
+        return "Done";
+    }
     if ((ARGS.size() < 3 && !mouse) || (ARGS.size() < 3 && mouse))
         return "bind: too few args";
     else if ((ARGS.size() > 4 && !mouse) || (ARGS.size() > 3 && mouse))

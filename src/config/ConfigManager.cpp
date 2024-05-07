@@ -1937,8 +1937,8 @@ std::optional<std::string> CConfigManager::handleBind(const std::string& command
             return "multiKey binds need 3 args.";
         const auto       keysPressed = CVarList(ARGS[0], 8, '+');
         SMultiKeyKeybind multiKeyKeybind;
-		multiKeyKeybind.handler = ARGS[1];
-		multiKeyKeybind.arg = ARGS[2];
+        multiKeyKeybind.handler = ARGS[1];
+        multiKeyKeybind.arg     = ARGS[2];
         for (auto KEY = keysPressed.begin(); KEY != keysPressed.end();) {
             // TODO: I might need to clean this up and remove parseKey.
             SParsedKey parsedKey = parseKey(KEY->data());

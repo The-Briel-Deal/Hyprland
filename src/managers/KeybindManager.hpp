@@ -127,7 +127,7 @@ class CKeybindManager {
 
     bool                            handleKeybinds(const uint32_t, const SPressedKeyWithMods&, bool);
 
-    bool                            handleMultiKeyKeybinds(const std::set<uint32_t>);
+    void                            handleMultiKeyKeybinds(const SMultiKeyKeybind);
 
     bool                            handleInternalKeybinds(xkb_keysym_t);
     bool                            handleVT(xkb_keysym_t);

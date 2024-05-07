@@ -382,9 +382,7 @@ bool CKeybindManager::onKeyEvent(std::any event, SP<IKeyboard> pKeyboard) {
                 sPressedKeys.insert(it->keysym);
                 if (mkkb->keysyms == sPressedKeys) {
                     Debug::log(LOG, "Keys Match!");
-                    //handleMultiKeyKeybinds(mkkb->keysyms);
-                    //const auto DISPATCHER = m_mDispatchers.find("exec");
-                    //DISPATCHER->second("kitty");
+                    handleMultiKeyKeybinds(*mkkb);
                 }
                 ++it;
             }
@@ -684,15 +682,11 @@ bool CKeybindManager::handleKeybinds(const uint32_t modmask, const SPressedKeyWi
     return found;
 }
 
-bool CKeybindManager::handleMultiKeyKeybinds(const std::set<uint32_t> keysPressed) {
-    bool found = false;
+void CKeybindManager::handleMultiKeyKeybinds(const SMultiKeyKeybind mkkb) {
 
-    for (auto& k : m_lMultiKeyKeybinds) {
-        if (k.keysyms == keysPressed) {
-            Debug::log(LOG, "Matched Keybind!!!!!");
-        }
-    }
-    return found;
+    Debug::log(LOG, "Matched Keybind!!!!!");
+    const auto DISPATCHER = m_mDispatchers.find(mkkb.handler);
+    DISPATCHER->second(mkkb.arg);
 }
 void CKeybindManager::shadowKeybinds(const xkb_keysym_t& doesntHave, const uint32_t doesntHaveCode) {
     // shadow disables keybinds after one has been triggered

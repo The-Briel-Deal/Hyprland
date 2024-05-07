@@ -1933,11 +1933,12 @@ std::optional<std::string> CConfigManager::handleBind(const std::string& command
     const auto ARGS = CVarList(value, 4);
 
     if (multiKey) {
-        Debug::log(LOG, "MultiKey Hit");
         if (ARGS.size() != 3)
             return "multiKey binds need 3 args.";
         const auto       keysPressed = CVarList(ARGS[0], 8, '+');
         SMultiKeyKeybind multiKeyKeybind;
+		multiKeyKeybind.handler = ARGS[1];
+		multiKeyKeybind.arg = ARGS[2];
         for (auto KEY = keysPressed.begin(); KEY != keysPressed.end();) {
             // TODO: I might need to clean this up and remove parseKey.
             SParsedKey parsedKey = parseKey(KEY->data());
@@ -1948,7 +1949,7 @@ std::optional<std::string> CConfigManager::handleBind(const std::string& command
         }
         g_pKeybindManager->m_lMultiKeyKeybinds.push_back(multiKeyKeybind);
         Debug::log(LOG, "MultiKey Hit");
-        return "Done";
+        return {};
     }
     if ((ARGS.size() < 3 && !mouse) || (ARGS.size() < 3 && mouse))
         return "bind: too few args";

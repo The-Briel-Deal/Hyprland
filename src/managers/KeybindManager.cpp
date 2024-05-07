@@ -374,19 +374,15 @@ bool CKeybindManager::onKeyEvent(std::any event, SP<IKeyboard> pKeyboard) {
     if (e.state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 
         m_dPressedKeys.push_back(KEY);
-        SMultiKeyKeybind kbnd;
-        kbnd.keycodes.insert(40);
-        kbnd.keycodes.insert(41);
-        m_lMultiKeyKeybinds.push_front(kbnd);
 
         for (auto mkkb = m_lMultiKeyKeybinds.begin(); mkkb != m_lMultiKeyKeybinds.end();) {
-            std::set<uint32_t> sPressedKeys;
+            std::set<xkb_keysym_t> sPressedKeys;
             for (auto it = m_dPressedKeys.begin(); it != m_dPressedKeys.end();) {
                 Debug::log(LOG, "test printing pressed keys {}", it->keycode);
-                sPressedKeys.insert(it->keycode);
-                if (mkkb->keycodes == sPressedKeys) {
+                sPressedKeys.insert(it->keysym);
+                if (mkkb->keysyms == sPressedKeys) {
                     Debug::log(LOG, "Keys Match!");
-                    handleMultiKeyKeybinds(mkkb->keycodes);
+                    //handleMultiKeyKeybinds(mkkb->keysyms);
                     //const auto DISPATCHER = m_mDispatchers.find("exec");
                     //DISPATCHER->second("kitty");
                 }
@@ -692,7 +688,7 @@ bool CKeybindManager::handleMultiKeyKeybinds(const std::set<uint32_t> keysPresse
     bool found = false;
 
     for (auto& k : m_lMultiKeyKeybinds) {
-        if (k.keycodes == keysPressed) {
+        if (k.keysyms == keysPressed) {
             Debug::log(LOG, "Matched Keybind!!!!!");
         }
     }

@@ -1936,13 +1936,17 @@ std::optional<std::string> CConfigManager::handleBind(const std::string& command
         Debug::log(LOG, "MultiKey Hit");
         if (ARGS.size() != 3)
             return "multiKey binds need 3 args.";
-        const auto keysPressed = CVarList(ARGS[0], 8, '+');
+        const auto       keysPressed = CVarList(ARGS[0], 8, '+');
+        SMultiKeyKeybind multiKeyKeybind;
         for (auto KEY = keysPressed.begin(); KEY != keysPressed.end();) {
+            // TODO: I might need to clean this up and remove parseKey.
             SParsedKey parsedKey = parseKey(KEY->data());
             const auto KBKEY     = xkb_keysym_from_name(parsedKey.key.c_str(), XKB_KEYSYM_CASE_INSENSITIVE);
+            multiKeyKeybind.keysyms.insert(KBKEY);
             ++KEY;
             Debug::log(LOG, "Key Value: {}", parsedKey.keycode);
         }
+        g_pKeybindManager->m_lMultiKeyKeybinds.push_back(multiKeyKeybind);
         Debug::log(LOG, "MultiKey Hit");
         return "Done";
     }

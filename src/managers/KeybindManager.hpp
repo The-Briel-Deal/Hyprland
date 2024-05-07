@@ -33,8 +33,8 @@ struct SKeybind {
 };
 
 struct SMultiKeyKeybind {
-    std::set<uint32_t> keycodes = {};
-    bool               catchAll = false;
+    std::set<xkb_keysym_t> keysyms  = {};
+    bool                   catchAll = false;
     //    uint32_t    modmask      = 0;
     std::string handler      = "";
     std::string arg          = "";
@@ -90,6 +90,7 @@ class CKeybindManager {
     void                                                              onSwitchOffEvent(const std::string&);
 
     void                                                              addKeybind(SKeybind);
+    void                                                              addMultiKeyKeybind(SMultiKeyKeybind);
     void                                                              removeKeybind(uint32_t, const SParsedKey&);
     uint32_t                                                          stringToModMask(std::string);
     uint32_t                                                          keycodeToModifier(xkb_keycode_t);

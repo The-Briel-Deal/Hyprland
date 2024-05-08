@@ -33,22 +33,17 @@ struct SKeybind {
 };
 
 struct SMultiKeyKeybind {
-    std::set<xkb_keysym_t> keysyms  = {};
-    bool                   catchAll = false;
-    //    uint32_t    modmask      = 0;
-    std::string handler      = "";
-    std::string arg          = "";
-    bool        locked       = false;
-    std::string submap       = "";
-    bool        release      = false;
-    bool        repeat       = false;
-    bool        mouse        = false;
-    bool        nonConsuming = false;
-    bool        transparent  = false;
-    bool        ignoreMods   = false;
-
-    // DO NOT INITIALIZE
-    bool shadowed = false;
+    std::set<xkb_keysym_t> keysyms      = {};
+    bool                   catchAll     = false;
+    std::string            handler      = "";
+    std::string            arg          = "";
+    bool                   locked       = false;
+    std::string            submap       = "";
+    bool                   release      = false;
+    bool                   repeat       = false;
+    bool                   mouse        = false;
+    bool                   nonConsuming = false;
+    bool                   transparent  = false;
 };
 
 enum eFocusWindowMode {
